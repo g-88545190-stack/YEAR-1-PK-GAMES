@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一年级体健 - 南瓜丰收大作战</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Comic Sans MS', 'Microsoft YaHei', sans-serif; }
+        body { background: #e0f7fa; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        header { background: #ff9800; color: white; width: 100%; text-align: center; padding: 15px; font-size: 22px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        /* 模式选择与计分板 */
+        .controls { margin: 15px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        .btn { background: #4caf50; color: white; border: none; padding: 10px 18px; border-radius: 20px; font-size: 16px; cursor: pointer; transition: 0.2s; }
+        .btn:hover { transform: scale(1.05); }
+        .score-board { background: white; padding: 10px 20px; border-radius: 15px; font-size: 18px; font-weight: bold; color: #e65100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+        /* 农场地图与南瓜网格 */
+        .farm-container { background: #81c784; border: 8px solid #5d4037; border-radius: 20px; padding: 20px; width: 90%; max-width: 900px; margin-bottom: 20px; }
+        .grid-pc { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; }
+        .grid-mobile { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+        /* 南瓜组件 */
+        .pumpkin-card { background: #fff3e0; border: 3px solid #ffb74d; border-radius: 15px; padding: 15px; text-align: center; cursor: pointer; position: relative; transition: 0.3s; }
+        .pumpkin-card:hover { transform: translateY(-5deg); background: #ffe0b2; }
+        .pumpkin-icon { font-size: 48px; display: block; margin-bottom: 5px; }
+        .harvested { opacity: 0.4; filter: grayscale(80%); cursor: not-allowed; }
+
+        /* 弹窗题目界面 */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 500px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .question-title { font-size: 18px; margin-bottom: 15px; color: #333; }
+        .option-btn { background: #2196f3; color: white; border: none; padding: 12px; margin: 8px 0; width: 100%; border-radius: 10px; font-size: 16px; cursor: pointer; }
+        .option-btn:hover { background: #1e88e5; }
+    </style>
+</head>
+<body>
+
+<header>🎃 一年级体育与健康教育：南瓜丰收农场 🎃</header>
+
+<div class="controls">
+    <button class="btn" onclick="setMode('pc')">💻 电脑视图</button>
+    <button class="btn" onclick="setMode('mobile')">📱 手机视图</button>
+    <div class="score-board">收获南瓜: <span id="score">0</span> / 30</div>
+</div>
+
+<div class="farm-container">
+    <div id="farmGrid" class="grid-pc"></div>
+</div>
+
+<!-- 题目弹窗 -->
+<div id="quizModal" class="modal">
+    <div class="modal-content">
+        <h3 id="categoryTag" style="color: #ff9800; margin-bottom: 10px;"></h3>
+        <p id="questionText" class="question-title"></p>
+        <div id="optionsContainer"></div>
+    </div>
+</div>
+
+<script>
+    // 30 道测试题库
+    const questions = [
+        // 主题一：勇敢地说不 (1-10)
+        { cat: "勇敢地说不", q: "1. 我们的身体属于谁？", options: ["A. 属于我自己", "B. 属于陌生人"], ans: 0 },
+        { cat: "勇敢地说不", q: "2. 衣服覆盖的隐私部位，可以随便让陌生人看或摸吗？", options: ["A. 可以", "B. 不可以"], ans: 1 },
+        { cat: "勇敢地说不", q: "3. 哪一个是我们的隐私部位？", options: ["A. 手掌", "B. 泳衣遮盖的地方"], ans: 1 },
+        { cat: "勇敢地说不", q: "4. 当有人尝试摸你的隐私部位时，你应该怎么做？", options: ["A. 勇敢说“不”并离开", "B. 假装不知道"], ans: 0 },
+        { cat: "勇敢地说不", q: "5. 遇到让你感到害怕或不舒服的接触，你要找谁帮忙？", options: ["A. 信任的长辈或老师", "B. 躲在房间哭"], ans: 0 },
+        { cat: "勇敢地说不", q: "6. 陌生人给你糖果，要带你离开学校，你应该怎么做？", options: ["A. 拿了糖果就跟去", "B. 拒绝并立刻告诉老师"], ans: 1 },
+        { cat: "勇敢地说不", q: "7. 以下哪一种情况是不安全的触碰？", options: ["A. 医生在妈妈陪同下检查", "B. 陌生人要摸你的大腿"], ans: 1 },
+        { cat: "勇敢地说不", q: "8. 如果有人威胁你“不许把秘密告诉父母”，你该怎么办？", options: ["A. 一定要告诉父母", "B. 听对方的话保守秘密"], ans: 0 },
+        { cat: "勇敢地说不", q: "9. “坏人”一定会长得很丑、很凶吗？", options: ["A. 不一定，坏人也可能笑眯眯的", "B. 一定长得很凶"], ans: 0 },
+        { cat: "勇敢地说不", q: "10. 守护身体安全的“三大原则”顺序是什么？", options: ["A. 拒绝、离开、报告", "B. 离开、忍耐、不说"], ans: 0 },
+
+        // 主题二：互相尊重乐融融 (11-20)
+        { cat: "互相尊重乐融融", q: "11. 见到老师和同学时，我们应该怎样？", options: ["A. 礼貌问好", "B. 假装没看见"], ans: 0 },
+        { cat: "互相尊重乐融融", q: "12. 借了同学的铅笔，用完后应该怎么做？", options: ["A. 谢谢并主动归还", "B. 偷偷放进自己书包"], ans: 0 },
+        { cat: "互相尊重乐融融", q: "13. 当同学生气或难过时，我们应该怎样？", options: ["A. 嘲笑他", "B. 关心和安慰他"], ans: 1 },
+        { cat: "互相尊重乐融融", q: "14. 和朋友一起玩玩具时，应该怎么做？", options: ["A. 抢过来自己玩", "B. 轮流玩、分享玩"], ans: 1 },
+        { cat: "互相尊重乐融融", q: "15. 不小心撞到同学时，第一句应该说什么？", options: ["A. 对不起", "B. 是你没看路"], ans: 0 },
+        { cat: "互相尊重乐融融", q: "16. 每个人都有不同的想法，我们应该怎样对待别人的意见？", options: ["A. 尊重并认真听", "B. 骂他不对"], ans: 0 },
+        { cat: "互相尊重乐融融", q: "17. 以下哪种行为体现了对家人的尊重？", options: ["A. 帮爸爸妈妈做家务", "B. 吃饭时大喊大叫"], ans: 0 },
+        { cat: "互相尊重乐融融", q: "18. 当同学玩游戏输了哭泣时，正确的做法是？", options: ["A. 鼓励他“下次加油”", "B. 笑他“你好笨”"], ans: 0 },
+        { cat: "互相尊重乐融融", q: "19. 在图书馆或教室里说话，应该注意什么？", options: ["A. 放轻声细语", "B. 大声尖叫"], ans: 0 },
+        { cat: "互相尊重乐融融", q: "20. 建立良好人际关系的关键是以下哪项？", options: ["A. 互相尊重与包容", "B. 只和成绩好的人玩"], ans: 0 },
+
+        // 主题三：疾病和细菌 (21-30)
+        { cat: "疾病和细菌", q: "21. 肉眼能直接看到细菌吗？", options: ["A. 能看到", "B. 太小了，看不到"], ans: 1 },
+        { cat: "疾病和细菌", q: "22. 饭前和便后，我们必须用什么洗手？", options: ["A. 只用清水冲冲", "B. 肥皂和清水洗手"], ans: 1 },
+        { cat: "疾病和细菌", q: "23. 咳嗽或打喷嚏时，应该怎么做？", options: ["A. 用纸巾或手肘遮住口鼻", "B. 对着同学大声喷"], ans: 0 },
+        { cat: "疾病和细菌", q: "24. 为什么我们不能吃掉在在地上的食物？", options: ["A. 沾上了细菌，容易生病", "B. 因为味道不好吃"], ans: 0 },
+        { cat: "疾病和细菌", q: "25. 患上传染病（如流感）时，应该怎样做？", options: ["A. 戴口罩并在家休息", "B. 照样去学校和同学玩"], ans: 0 },
+        { cat: "疾病和细菌", q: "26. 保持身体清洁，我们每天应该要做什么？", options: ["A. 洗澡和刷牙", "B. 只要换衣服不用洗澡"], ans: 0 },
+        { cat: "疾病和细菌", q: "27. 哪一种蚊子叮咬后可能会引起骨痛热症？", options: ["A. 黑白斑纹的伊蚊", "B. 普通小黄蚊"], ans: 0 },
+        { cat: "疾病和细菌", q: "28. 为了防止家里的容器滋生蚊子，我们应该怎么做？", options: ["A. 定期清理积水", "B. 让积水放着不管"], ans: 0 },
+        { cat: "疾病和细菌", q: "29. 正确的“七步洗手法”主要目的是为了什么？", options: ["A. 把手上的细菌彻底洗掉", "B. 让手变香香"], ans: 0 },
+        { cat: "疾病和细菌", q: "30. 养成良好的卫生习惯，对我们有什么好处？", options: ["A. 提高免疫力，身体健康", "B. 只是为了给老师检查"], ans: 0 }
+    ];
+
+    let score = 0;
+    let currentQIndex = null;
+    const harvestedSet = new Set();
+
+    // 初始化网格
+    function initFarm() {
+        const grid = document.getElementById("farmGrid");
+        grid.innerHTML = "";
+        questions.forEach((q, index) => {
+            const card = document.createElement("div");
+            card.className = `pumpkin-card ${harvestedSet.has(index) ? 'harvested' : ''}`;
+            card.innerHTML = `
+                <span class="pumpkin-icon">🎃</span>
+                <small>第 ${index + 1} 颗</small>
+            `;
+            card.onclick = () => openQuiz(index);
+            grid.appendChild(card);
+        });
+    }
+
+    // 打开题目
+    function openQuiz(index) {
+        if (harvestedSet.has(index)) return;
+        currentQIndex = index;
+        const qData = questions[index];
+        document.getElementById("categoryTag").innerText = `【${qData.cat}】`;
+        document.getElementById("questionText").innerText = qData.q;
+        
+        const optsContainer = document.getElementById("optionsContainer");
+        optsContainer.innerHTML = "";
+        qData.options.forEach((opt, optIdx) => {
+            const btn = document.createElement("button");
+            btn.className = "option-btn";
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(optIdx);
+            optsContainer.appendChild(btn);
+        });
+
+        document.getElementById("quizModal").style.display = "flex";
+    }
+
+    // 检查答案
+    function checkAnswer(selectedIdx) {
+        const qData = questions[currentQIndex];
+        if (selectedIdx === qData.ans) {
+            alert("🎉 太棒了！答对了，成功收获一颗南瓜！");
+            harvestedSet.add(currentQIndex);
+            score++;
+            document.getElementById("score").innerText = score;
+            document.getElementById("quizModal").style.display = "none";
+            initFarm();
+        } else {
+            alert("❌ 再想一想哦！试着选另一个答案！");
+        }
+    }
+
+    // 切换视图模式
+    function setMode(mode) {
+        const grid = document.getElementById("farmGrid");
+        if (mode === 'mobile') {
+            grid.className = "grid-mobile";
+        } else {
+            grid.className = "grid-pc";
+        }
+    }
+
+    // 启动游戏
+    initFarm();
+</script>
+</body>
+</html>
